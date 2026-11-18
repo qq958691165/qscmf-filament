@@ -13,6 +13,7 @@
 | `media`（quansitech/cmf-module-media） | 媒体库：TOS/OSS/COS 浏览器直传与 local 本地上传、内容哈希去重（秒传）、引用计数与归零自动清理、MediaPicker 字段、RichEditor 富文本附件接管（HasMediaRichContent）、媒体管理 Resource |
 | `area`（quansitech/cmf-module-area） | 行政区划：内置四级区划数据、业务引用登记（merge_strategy）、AreaPicker、上游变更升级流水线 |
 | `import`（quansitech/cmf-module-import） | 导入扩展：仅 xlsx 导入（单元格归一与可疑值行级拒绝）、xlsx 模板生成（文本锁定/长度/下拉）、失败清单 xlsx 导出 |
+| `rich-content`（quansitech/cmf-module-rich-content） | TinyMCE 富文本、图片/视频直传、公众号正文导入和媒体引用；见 [安装说明](rich-content/README.md) |
 
 ## 安装（新项目）
 
@@ -31,6 +32,8 @@ cd my-admin
 
 ```bash
 composer require quansitech/cmf-core quansitech/cmf-module-users quansitech/cmf-module-roles quansitech/cmf-module-auditing
+# 可选：TinyMCE 富文本（自动依赖 cmf-module-media）
+# composer require quansitech/cmf-module-rich-content
 ```
 
 ### 3. 一键初始化
