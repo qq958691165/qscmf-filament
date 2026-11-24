@@ -117,3 +117,10 @@ server {
 
 - 上面的 `fastcgi_buffering off;` 与 `fastcgi_read_timeout` 放在 PHP location，对整站生效；若只想对 `/mcp/` 生效，可把 `location ^~ /mcp/` 单独写成直接 `fastcgi_pass` 到 PHP-FPM 并设置这些参数。
 - 反向代理/负载均衡后再接本机时，确保 Laravel 信任代理（`TrustProxies`），以便正确生成 `https` 链接。
+
+## 审计
+
+MCP 的写操作（create / update / delete）走 Eloquent 模型事件，接入 `owen-it/laravel-auditing`：
+业务模型 `use OwenIt\Auditing\Auditable` 并实现 `OwenIt\Auditing\Contracts\Auditable` 后，
+MCP 写入会在 `audits` 表生成 `created` / `updated` / `deleted` 记录。`user_id` 为授权码所属的后台用户，
+`url` 为 `/mcp/{panel}`，便于在「审计日志」中区分来自 MCP 的变更。
