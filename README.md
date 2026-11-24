@@ -17,7 +17,7 @@
 
 ## 安装（新项目）
 
-**环境要求**：PHP >= 8.3、Composer 2、Node.js + npm、MySQL / PostgreSQL / SQLite 任一（新项目默认 SQLite，可直接使用）。
+**环境要求**：PHP >= 8.5、Composer 2、Node.js + npm、MySQL / PostgreSQL / SQLite 任一（新项目默认 SQLite，可直接使用）。
 
 ### 1. 创建 Laravel 项目
 

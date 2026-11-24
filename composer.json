@@ -14,6 +14,7 @@
         { "type": "path", "url": "rich-content", "options": { "symlink": true } }
     ],
     "require": {
+        "php": "^8.5",
         "quansitech/cmf-core": "^1.0@dev",
         "quansitech/cmf-module-area": "^1.0@dev",
         "quansitech/cmf-module-auditing": "^1.0@dev",

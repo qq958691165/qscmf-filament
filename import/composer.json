@@ -13,7 +13,7 @@
         "template"
     ],
     "require": {
-        "php": "^8.3",
+        "php": "^8.5",
         "filament/actions": "^5.8",
         "league/csv": "^9.27",
         "openspout/openspout": "^4.23",
