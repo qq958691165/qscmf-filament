@@ -1,0 +1,23 @@
+{
+    "name": "quansitech/cmf-module-mcp",
+    "description": "QS CMF MCP 服务、授权码管理与通用资源工具",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.5",
+        "laravel/mcp": "^1.2",
+        "quansitech/cmf-core": "^1.0",
+        "quansitech/cmf-module-users": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Quansitech\\Cmf\\Mcp\\": "src/"
+        }
+    },
+    "extra": {
+        "branch-alias": {"dev-main": "1.x-dev"},
+        "laravel": {
+            "providers": ["Quansitech\\Cmf\\Mcp\\CmfMcpServiceProvider"]
+        }
+    }
+}

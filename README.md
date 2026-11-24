@@ -14,6 +14,7 @@
 | `area`（quansitech/cmf-module-area） | 行政区划：内置四级区划数据、业务引用登记（merge_strategy）、AreaPicker、上游变更升级流水线 |
 | `import`（quansitech/cmf-module-import） | 导入扩展：仅 xlsx 导入（单元格归一与可疑值行级拒绝）、xlsx 模板生成（文本锁定/长度/下拉）、失败清单 xlsx 导出 |
 | `rich-content`（quansitech/cmf-module-rich-content） | TinyMCE 富文本、图片/视频直传、公众号正文导入和媒体引用；见 [安装说明](rich-content/README.md) |
+| `mcp`（quansitech/cmf-module-mcp） | 按后台用户权限开放 MCP 工具，支持只读和读写授权码；见 [安装说明](mcp/README.md) |
 
 ## 安装（新项目）
 

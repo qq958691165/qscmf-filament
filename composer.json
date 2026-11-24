@@ -1,6 +1,6 @@
 {
     "name": "quansitech/cmf-monorepo",
-    "description": "QS CMF monorepo 开发入口：聚合 core / users / roles / auditing / media / area / import / rich-content 八个包（不对外发布）",
+    "description": "QS CMF monorepo 开发入口：聚合 core / users / roles / auditing / media / area / import / rich-content / mcp 九个包（不对外发布）",
     "type": "project",
     "license": "proprietary",
     "repositories": [
@@ -8,6 +8,7 @@
         { "type": "path", "url": "users", "options": { "symlink": true } },
         { "type": "path", "url": "roles", "options": { "symlink": true } },
         { "type": "path", "url": "auditing", "options": { "symlink": true } },
+        { "type": "path", "url": "mcp", "options": { "symlink": true, "versions": { "quansitech/cmf-module-mcp": "1.x-dev" } } },
         { "type": "path", "url": "media", "options": { "symlink": true } },
         { "type": "path", "url": "area", "options": { "symlink": true } },
         { "type": "path", "url": "import", "options": { "symlink": true } },
@@ -19,6 +20,7 @@
         "quansitech/cmf-module-area": "^1.0@dev",
         "quansitech/cmf-module-auditing": "^1.0@dev",
         "quansitech/cmf-module-import": "^1.0@dev",
+        "quansitech/cmf-module-mcp": "^1.0@dev",
         "quansitech/cmf-module-media": "^1.0@dev",
         "quansitech/cmf-module-roles": "^1.0@dev",
         "quansitech/cmf-module-users": "^1.0@dev",
