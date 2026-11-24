@@ -55,6 +55,9 @@ return [
     // 限流：每分钟请求数,分钟窗口。默认 60,1（每分钟 60 次）。
     'throttle' => '60,1',
 
+    // 后台签发令牌时用户搜索建议返回条数。默认 50，仅作建议值，非强制；设为 0 表示不限制。
+    'user_search_limit' => (int) env('CMF_MCP_USER_SEARCH_LIMIT', 50),
+
     // list_records 单次最多扫描的记录行数，防止在大表上逐行做授权过滤时全表扫描。
     // 超过上限会返回错误，提示收窄筛选条件。默认 5000。
     'max_scan_rows' => (int) env('CMF_MCP_MAX_SCAN_ROWS', 5000),

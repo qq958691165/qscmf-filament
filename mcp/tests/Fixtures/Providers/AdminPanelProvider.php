@@ -7,9 +7,10 @@ namespace Quansitech\Cmf\Mcp\Tests\Fixtures\Providers;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Quansitech\Cmf\Mcp\McpPlugin;
+use Quansitech\Cmf\Mcp\Tests\Fixtures\Resources\TestArticleCategoryResource;
 
 /**
- * 测试面板：只挂载 MCP 插件，供 /mcp/{panel} 路由与面板隔离校验使用。
+ * 测试面板：挂载 MCP 插件与已注册的资源，供面板隔离校验使用。
  */
 class AdminPanelProvider extends PanelProvider
 {
@@ -19,6 +20,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->resources([
+                TestArticleCategoryResource::class,
+            ])
             ->plugin(McpPlugin::make());
     }
 }

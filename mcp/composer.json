@@ -2,9 +2,10 @@
     "name": "quansitech/cmf-module-mcp",
     "description": "QS CMF MCP 服务、授权码管理与通用资源工具",
     "type": "library",
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.5",
+        "filament/filament": "^5.0",
         "laravel/mcp": "^1.2",
         "quansitech/cmf-core": "^1.0",
         "quansitech/cmf-module-users": "^1.0"
@@ -12,6 +13,9 @@
     "require-dev": {
         "orchestra/testbench": "^11.0",
         "phpunit/phpunit": "^12.0"
+    },
+    "config": {
+        "sort-packages": true
     },
     "autoload": {
         "psr-4": {

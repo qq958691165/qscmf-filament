@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Quansitech\Cmf\Mcp\Tools;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -37,10 +38,30 @@ abstract class CmfTool extends Tool
         } catch (ValidationException $exception) {
             return Response::error(ValidationMessages::from($exception));
         } catch (Throwable $exception) {
-            report($exception);
+            // 数据库异常消息会内联 SQL 绑定值，上报前先脱敏，避免提交内容进入日志。
+            // 自定义 Repository 可能把 QueryException 包在其它异常里，因此沿异常链查找。
+            $queryException = $this->queryExceptionFrom($exception);
+
+            report($queryException !== null
+                ? new \RuntimeException('Database query failed with SQLSTATE '.$queryException->getCode().'.', 0)
+                : $exception);
 
             return Response::error('The operation failed.');
         }
+    }
+
+    /**
+     * 沿异常链查找数据库查询异常，避免异常被 Repository 包装后漏掉脱敏。
+     */
+    protected function queryExceptionFrom(Throwable $exception): ?QueryException
+    {
+        do {
+            if ($exception instanceof QueryException) {
+                return $exception;
+            }
+        } while (($exception = $exception->getPrevious()) !== null);
+
+        return null;
     }
 
     /**

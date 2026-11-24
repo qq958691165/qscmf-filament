@@ -114,12 +114,19 @@ final class McpTokenActions
         $name = $query->qualifyColumn('name');
         $email = $query->qualifyColumn('email');
 
-        return $query
+        $query
             ->where(fn (Builder $query): Builder => $query
                 ->whereLike($name, "%{$search}%")
                 ->orWhereLike($email, "%{$search}%"))
-            ->orderBy($name)
-            ->limit(50)
+            ->orderBy($name);
+
+        // 建议值，非强制；0 表示不限制。
+        $limit = (int) config('cmf-mcp.user_search_limit', 50);
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        return $query
             ->get()
             ->filter(McpTokenAccess::allowsManagingUser(...))
             ->mapWithKeys(fn (Model $user): array => [$user->getKey() => self::userLabel($user)])

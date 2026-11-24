@@ -59,12 +59,16 @@ final class McpTokenResource extends Resource
 
         $users = McpTokenAccess::userResource()::getEloquentQuery();
         $userKey = $users->getModel()->getQualifiedKeyName();
+        $userAlias = $users->getModel()->getKeyName();
 
         // 逐条按宿主用户资源与策略复核可管理的用户；lazyById 避免深分页的偏移成本。
         $manageableOwnerIds = $users
             ->where($userKey, '!=', $actorId)
             ->whereIn($userKey, McpToken::query()->select('user_id'))
-            ->lazyById(100, $userKey)
+            // 游标分页要求主键排序稳定；用户资源可能自带默认排序，
+            // 而 forPageAfterId 只移除主键列的排序，保留其它排序会跳过部分用户。
+            ->reorder()
+            ->lazyById(100, $userKey, $userAlias)
             ->filter(McpTokenAccess::allowsManagingUser(...))
             ->map(fn ($user) => $user->getKey())
             ->all();

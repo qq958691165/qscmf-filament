@@ -4,12 +4,29 @@ declare(strict_types=1);
 
 namespace Quansitech\Cmf\Mcp\Tests\Feature;
 
+use Filament\Facades\Filament;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
+use Laravel\Mcp\Request;
+use Quansitech\Cmf\Mcp\Filament\McpTokenAccess;
+use Quansitech\Cmf\Mcp\Filament\Resources\McpTokens\McpTokenResource;
 use Quansitech\Cmf\Mcp\Models\McpToken;
+use Quansitech\Cmf\Mcp\Resources\EloquentResourceRepository;
+use Quansitech\Cmf\Mcp\Resources\Exceptions\ToolException;
+use Quansitech\Cmf\Mcp\Resources\ResourceAuthorizer;
+use Quansitech\Cmf\Mcp\Resources\ResourceRegistry;
+use Quansitech\Cmf\Mcp\Resources\ResourceRuntime;
 use Quansitech\Cmf\Mcp\Tests\Fixtures\Models\TestArticleCategory;
 use Quansitech\Cmf\Mcp\Tests\Fixtures\Models\TestUser;
+use Quansitech\Cmf\Mcp\Tests\Fixtures\Resources\OrderedTestUserResource;
+use Quansitech\Cmf\Mcp\Tests\Fixtures\Resources\TestArticleCategoryResource;
+use Quansitech\Cmf\Mcp\Tests\Fixtures\Resources\UnregisteredArticleCategoryResource;
+use Quansitech\Cmf\Mcp\Tests\Fixtures\Tools\ThrowingCmfTool;
 use Quansitech\Cmf\Mcp\Tests\TestCase;
+use RuntimeException;
 
 /**
  * MCP HTTP 传输与通用工具的回归测试（testbench 自包含，不依赖宿主应用）。
@@ -154,6 +171,153 @@ final class McpEndpointTest extends TestCase
         $sorted = $this->tool('list_records', ['sort' => 'name', 'direction' => 'desc'], $read)
             ->assertOk()->assertJsonPath('result.isError', false);
         $this->assertStringContainsString('Beta', $sorted->getContent());
+    }
+
+    public function test_read_token_cannot_update_or_delete(): void
+    {
+        $user = $this->makeUser('viewAny', 'view', 'create', 'update', 'delete');
+        $read = McpToken::issue($user, 'Read client', 'read');
+        $record = TestArticleCategory::query()->create(['name' => 'Alpha', 'slug' => 'alpha']);
+
+        $this->tool('update_record', ['id' => $record->id, 'data' => ['name' => 'Hacked']], $read)
+            ->assertOk()->assertJsonPath('result.isError', true);
+        $this->tool('delete_record', ['id' => $record->id], $read)
+            ->assertOk()->assertJsonPath('result.isError', true);
+        $this->assertDatabaseHas('article_categories', ['id' => $record->id, 'name' => 'Alpha']);
+    }
+
+    public function test_resource_must_be_registered_on_current_panel(): void
+    {
+        $user = $this->makeUser('viewAny', 'view');
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->actingAs($user, 'web');
+        TestArticleCategory::query()->create(['name' => 'Alpha', 'slug' => 'alpha']);
+
+        $base = [
+            'model' => TestArticleCategory::class,
+            'read' => ['id', 'name'],
+            'operations' => ['viewAny', 'view'],
+        ];
+
+        config(['cmf-mcp.resources' => ['article-categories' => $base + ['resource' => TestArticleCategoryResource::class]]]);
+        $result = $this->runtime()->listRecords($user, 'article-categories');
+        $this->assertSame('Alpha', $result['records'][0]['name']);
+
+        // 未注册到当前面板的同模型 Resource 不能通过 MCP 访问。
+        config(['cmf-mcp.resources' => ['article-categories' => $base + ['resource' => UnregisteredArticleCategoryResource::class]]]);
+        $this->expectException(ToolException::class);
+        $this->runtime()->listRecords($user, 'article-categories');
+    }
+
+    public function test_cross_user_issuance_requires_permission_and_records_issuer(): void
+    {
+        $boss = $this->makeUserWithEmail('owner-boss@example.test');
+        $clerk = $this->makeUserWithEmail('clerk@example.test');
+        $target = $this->makeUserWithEmail('target@example.test');
+
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Gate::define('Manage:McpToken', static fn (TestUser $user): bool => true);
+        Gate::define('ManageOthers:McpToken', static fn (TestUser $user): bool => $user->email === 'owner-boss@example.test');
+
+        $this->actingAs($clerk, 'web');
+        $this->assertFalse(McpTokenAccess::allowsManagingUser($target));
+
+        $this->actingAs($boss, 'web');
+        $this->assertTrue(McpTokenAccess::allowsManagingUser($target));
+
+        $plain = McpToken::issue($target, 'Delegated', 'read', null, $boss);
+        $record = McpToken::query()->where('token_hash', hash('sha256', $plain))->sole();
+        $this->assertSame($boss->getKey(), $record->issued_by);
+        $this->assertTrue($record->issuer->is($boss));
+    }
+
+    public function test_token_list_handles_multiple_candidate_chunks(): void
+    {
+        $actor = $this->makeUserWithEmail('actor@example.test');
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Gate::define('Manage:McpToken', static fn (TestUser $user): bool => true);
+        Gate::define('ManageOthers:McpToken', static fn (TestUser $user): bool => true);
+        $this->actingAs($actor, 'web');
+
+        // 超过 100 名令牌持有人，触发 lazyById 的多批次路径（游标别名回归）。
+        for ($i = 1; $i <= 120; $i++) {
+            $owner = TestUser::query()->create([
+                'name' => "Owner {$i}",
+                'email' => "owner{$i}@example.test",
+                'password' => 'secret',
+                'mcp_abilities' => [],
+            ]);
+            McpToken::issue($owner, "Token {$i}", 'read');
+        }
+
+        $this->assertSame(120, McpTokenResource::getEloquentQuery()->count());
+    }
+
+    public function test_token_list_is_stable_when_user_resource_has_default_ordering(): void
+    {
+        $actor = $this->makeUserWithEmail('ordered-actor@example.test');
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Gate::define('Manage:McpToken', static fn (TestUser $user): bool => true);
+        Gate::define('ManageOthers:McpToken', static fn (TestUser $user): bool => true);
+        $this->actingAs($actor, 'web');
+        config(['cmf-users.resource' => OrderedTestUserResource::class]);
+
+        // 名称与 id 反向排列，模拟用户资源默认按 name 排序；若游标保留该排序会漏人。
+        for ($i = 1; $i <= 250; $i++) {
+            $owner = TestUser::query()->create([
+                'name' => sprintf('%03d', 1000 - $i),
+                'email' => "ordered-owner{$i}@example.test",
+                'password' => 'secret',
+                'mcp_abilities' => [],
+            ]);
+            McpToken::issue($owner, "Ordered token {$i}", 'read');
+        }
+
+        $this->assertSame(250, McpTokenResource::getEloquentQuery()->count());
+    }
+
+    public function test_wrapped_query_exception_is_sanitized_before_logging(): void
+    {
+        $user = $this->makeUser();
+        $this->actingAs($user, 'web');
+
+        $binding = 'BINDING-SECRET-123';
+        $queryException = new QueryException(
+            'mysql',
+            'select * from orders where customer_phone = ?',
+            [$binding],
+            new RuntimeException('PDO failure'),
+        );
+        $wrapped = new RuntimeException('Repository failed', 0, $queryException);
+
+        Log::spy();
+        (new ThrowingCmfTool($wrapped))->handle(new Request);
+
+        Log::shouldHaveReceived('error')->once()->withArgs(function (string $message, array $context = []) use ($binding): bool {
+            $logged = $context['exception'] ?? null;
+
+            $this->assertStringContainsString('Database query failed with SQLSTATE', $message);
+            $this->assertStringNotContainsString($binding, $message);
+            $this->assertInstanceOf(RuntimeException::class, $logged);
+            $this->assertNull($logged->getPrevious());
+
+            return true;
+        });
+    }
+
+    private function runtime(): ResourceRuntime
+    {
+        return new ResourceRuntime(new ResourceRegistry, new EloquentResourceRepository, new ResourceAuthorizer);
+    }
+
+    private function makeUserWithEmail(string $email, string ...$abilities): TestUser
+    {
+        return TestUser::query()->create([
+            'name' => 'MCP Test User',
+            'email' => $email,
+            'password' => 'secret',
+            'mcp_abilities' => array_values($abilities),
+        ]);
     }
 
     private function makeUser(string ...$abilities): TestUser

@@ -4,7 +4,7 @@
 
 ## 安装
 
-需要 PHP 8.3+、Filament 5，以及兼容 `laravel/mcp` 1.2 的 Laravel 版本。模块依赖 CMF Core 和 Users。
+需要 PHP 8.5+、Filament 5，以及兼容 `laravel/mcp` 1.2 的 Laravel 版本。模块依赖 CMF Core 和 Users。
 
 ```bash
 composer require quansitech/cmf-module-mcp
@@ -15,7 +15,7 @@ php artisan shield:generate --all --option=permissions --panel=admin --no-intera
 
 新项目安装 CMF 时也可通过 `php artisan cmf:install` 发布配置并处理迁移。
 
-默认启用非租户 `admin` 面板，端点为 `/mcp/admin`。在 `config/cmf-mcp.php` 的 `panels` 中配置启用的面板 ID。`middleware` 可追加限流等应用中间件。配置了 `resource` 的资源只有在其 Filament Resource 已注册到当前面板时才可访问，从而在多面板宿主中保持面板隔离。`max_scan_rows`（默认 5000）限制 `list_records` 单次扫描行数，超过会提示收窄筛选条件。多租户面板需要单独的租户绑定机制，目前不提供该入口。
+默认启用非租户 `admin` 面板，端点为 `/mcp/admin`。在 `config/cmf-mcp.php` 的 `panels` 中配置启用的面板 ID。`middleware` 可追加限流等应用中间件。配置了 `resource` 的资源只有在其 Filament Resource 已注册到当前面板时才可访问，从而在多面板宿主中保持面板隔离。`max_scan_rows`（默认 5000）限制 `list_records` 单次扫描行数，超过会提示收窄筛选条件。`user_search_limit`（默认 50，设为 0 表示不限制）控制后台签发令牌时用户搜索返回的条数，50 只是建议值，非强制。多租户面板需要单独的租户绑定机制，目前不提供该入口。
 
 ## 配置资源
 
@@ -40,7 +40,7 @@ php artisan shield:generate --all --option=permissions --panel=admin --no-intera
 - `model` 必填。配置 `resource` 后，基于该 Filament Resource 的 `getEloquentQuery()` 查询，并使用它的显示名称。将对应的 Resource 注册到需要开放的面板。
 - `description` 可选，为资源提供一句中文说明，会出现在 `list_resources` 与 `describe_resource` 的结果里；省略时为空字符串。
 - `read` 是对外返回的字段白名单。省略 `operations` 时，配置了 `read` 的资源默认只开放 `viewAny` 和 `view`。列表也会逐条检查 `view`。`describe_resource` 列出的 `update` 和 `delete` 仍须通过目标记录的 Policy。
-- 创建和更新只接受 `write` 中通过校验且可批量赋值的字段。更新为部分更新，只对本次提交的字段做校验；若字段间存在跨字段依赖规则（如 `required_with`、`same`、`confirmed`），请在同一次 `data` 中一并提交相关字段。更新时唯一性规则会自动忽略当前记录本身，重新提交未变更的唯一字段不会被判为重复。需要关联更新、上传、领域服务或复杂校验的资源，可以通过实现 `Resources\Contracts\ResourceRepository` 定制读写流程。实现时保留资源查询范围、字段限制及业务约束。
+- 创建和更新只接受 `write` 中通过校验且可批量赋值的字段。更新为部分更新，只对本次提交的字段做校验；若字段间存在跨字段依赖规则（如 `required_with`、`same`、`confirmed`），请在同一次 `data` 中一并提交相关字段。更新时唯一性规则会自动忽略当前记录本身，重新提交未变更的唯一字段不会被判为重复。目前仅自动处理 `unique:表,列` 与 `unique:表,列,排除值,主键列` 两种形式；带附加 `where` 条件或自定义主键的规则需在自定义 Repository 中处理。需要关联更新、上传、领域服务或复杂校验的资源，可以通过实现 `Resources\Contracts\ResourceRepository` 定制读写流程。实现时保留资源查询范围、字段限制及业务约束。
 - 可配置实现 `Resources\Contracts\ResourceScope` 的 `scope`，进一步限制每位用户可访问的记录。配置应用 Policy 后，再给角色分配相应权限。
 
 | 工具 | 参数或用途 |

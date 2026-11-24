@@ -24,7 +24,9 @@ use Quansitech\Cmf\Mcp\CmfMcpServiceProvider;
 use Quansitech\Cmf\Mcp\Tests\Fixtures\Models\TestArticleCategory;
 use Quansitech\Cmf\Mcp\Tests\Fixtures\Models\TestUser;
 use Quansitech\Cmf\Mcp\Tests\Fixtures\Policies\TestArticleCategoryPolicy;
+use Quansitech\Cmf\Mcp\Tests\Fixtures\Policies\TestUserPolicy;
 use Quansitech\Cmf\Mcp\Tests\Fixtures\Providers\AdminPanelProvider;
+use Quansitech\Cmf\Mcp\Tests\Fixtures\Resources\TestUserResource;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
 
 abstract class TestCase extends Orchestra
@@ -60,6 +62,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('database.default', 'testing');
         $app['config']->set('auth.providers.users.model', TestUser::class);
         $app['config']->set('cmf-users.model', TestUser::class);
+        $app['config']->set('cmf-users.resource', TestUserResource::class);
 
         $app['config']->set('cmf-mcp.panels', ['admin']);
         $app['config']->set('cmf-mcp.middleware', []);
@@ -90,5 +93,6 @@ abstract class TestCase extends Orchestra
         parent::setUp();
 
         Gate::policy(TestArticleCategory::class, TestArticleCategoryPolicy::class);
+        Gate::policy(TestUser::class, TestUserPolicy::class);
     }
 }
