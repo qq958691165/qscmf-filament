@@ -17,3 +17,5 @@ rich-content/composer.lock
 .codegraph/
 .yunxiao/
 .opencode/
+mcp/vendor/
+mcp/composer.lock
