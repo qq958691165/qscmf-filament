@@ -23,8 +23,6 @@ use Filament\Tables\Columns\Column;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Override;
-use Quansitech\Cmf\Mcp\Filament\McpTokenAccess;
-use Quansitech\Cmf\Mcp\Filament\Resources\McpTokens\RelationManagers\McpTokensRelationManager;
 use Quansitech\Cmf\Users\Filament\Resources\Users\Pages\CreateUser;
 use Quansitech\Cmf\Users\Filament\Resources\Users\Pages\EditUser;
 use Quansitech\Cmf\Users\Filament\Resources\Users\Pages\ListUsers;
@@ -211,10 +209,6 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         $relations = [AuditsRelationManager::class];
-
-        if (class_exists(McpTokenAccess::class) && McpTokenAccess::supportsCurrentPanel()) {
-            $relations[] = McpTokensRelationManager::class;
-        }
 
         return $relations;
     }

@@ -12,7 +12,7 @@ quansitech/qscmf-filament（本仓库，所有开发只在这里）
    ├── area/      ──split──► quansitech/cmf-module-area      ──┤
    ├── import/    ──split──► quansitech/cmf-module-import    ──┤
    ├── rich-content/ ─split──► quansitech/cmf-module-rich-content ─┤
-   └── mcp/       ──split──► quansitech/cmf-module-mcp       ──┘
+   └── agent/     ──split──► quansitech/cmf-module-agent     ──┘
 ```
 
 > 以下假设 monorepo 仓库为 `quansitech/qscmf-filament`、镜像仓库为 `quansitech/cmf-*`。命名不同时全局替换即可。
@@ -31,7 +31,7 @@ quansitech/qscmf-filament（本仓库，所有开发只在这里）
 | `area` | `area-v1.0.0` | `v1.0.0` |
 | `import` | `import-v1.0.0` | `v1.0.0` |
 | `rich-content` | `rich-content-v1.1.0` | `v1.1.0` |
-| `mcp` | `mcp-v1.0.0` | `v1.0.0` |
+| `agent` | `agent-v1.0.0` | `v1.0.0` |
 
 - monorepo 的 tag 带 `{package}-` 前缀（仅用于触发对应包的 split）；
 - 镜像仓库与 Packagist 上的版本是不带前缀的 `v{version}`，符合 Composer semver；
@@ -40,7 +40,7 @@ quansitech/qscmf-filament（本仓库，所有开发只在这里）
 ## 一次性配置
 
 1. 在 GitHub 创建 9 个 **public** 仓库，保持默认分支 `main`：
-   `cmf-core`、`cmf-module-users`、`cmf-module-roles`、`cmf-module-auditing`、`cmf-module-media`、`cmf-module-area`、`cmf-module-import`、`cmf-module-rich-content`、`cmf-module-mcp`。
+   `cmf-core`、`cmf-module-users`、`cmf-module-roles`、`cmf-module-auditing`、`cmf-module-media`、`cmf-module-area`、`cmf-module-import`、`cmf-module-rich-content`、`cmf-module-agent`。
    **每个仓库至少要有一个提交**（勾选 Add a README 或任意初始提交均可）——split action
    （v2.4.5 实测）在完全空的仓库上会推送未出生分支而失败。
 2. 创建 fine-grained PAT，对这 9 个仓库授予 `Contents: Read and write`（或用 GitHub App 生成安装 token）。
@@ -51,7 +51,7 @@ quansitech/qscmf-filament（本仓库，所有开发只在这里）
 3. 推送首个版本 tag，等 workflow 跑完（9 个包各自打一个，互不影响）：
 
    ```bash
-   git tag core-v1.0.0 users-v1.0.0 roles-v1.0.0 auditing-v1.0.0 media-v1.0.0 area-v1.0.0 import-v1.0.0 rich-content-v1.0.0 mcp-v1.0.0
+   git tag core-v1.0.0 users-v1.0.0 roles-v1.0.0 auditing-v1.0.0 media-v1.0.0 area-v1.0.0 import-v1.0.0 rich-content-v1.0.0 agent-v1.0.0
    git push origin --tags
    ```
 
@@ -92,7 +92,7 @@ Packagist 收到 webhook 后刷新版本。
 
 - **不要**向镜像仓库直接提交或提 PR，内容会被下一次 split 覆盖；issue/PR 请指向 monorepo。
 - 镜像仓库默认分支保持 `main`，与 workflow 中 `branch: main` 一致。
-- monorepo tag 必须是 `{package}-v{version}` 格式（package 为 `core/users/roles/auditing/media/area/import/rich-content/mcp` 之一），
+- monorepo tag 必须是 `{package}-v{version}` 格式（package 为 `core/users/roles/auditing/media/area/import/rich-content/agent` 之一），
   版本号部分必须是合法 semver（`v1.2.0` 或 `1.2.0`），否则 Composer 不识别。格式不符时 workflow 会报错。
 - `SPLIT_TOKEN` 未配置时 workflow 只打印 notice 并跳过 split（不报红），配置后自动生效。
 - 发布 = 打 tag，不要手动改镜像；所有变更先合入 monorepo `main`。
