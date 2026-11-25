@@ -14,9 +14,6 @@ use InvalidArgumentException;
 use Packstub\Agents\Mcp\AgentTool;
 use Packstub\FilamentAgents\AgentsPlugin;
 use Quansitech\Cmf\Agent\Support\DiscoveredAgentTools;
-use Quansitech\Cmf\Agent\Tools\DescribeCmfResource;
-use Quansitech\Cmf\Agent\Tools\GetCmfRecordAudit;
-use Quansitech\Cmf\Agent\Tools\SearchCmfRecords;
 use Throwable;
 
 /**
@@ -63,7 +60,7 @@ final class AgentPlugin implements Plugin
     public function boot(Panel $panel): void {}
 
     /**
-     * 内置工具 + 其它 Composer 包通过 extra.cmf-agent.tools 声明的工具 + 配置 tools。
+     * 其它 Composer 包通过 extra.cmf-agent.tools 声明的工具 + 配置 tools。
      *
      * 自动发现里无效或损坏的声明只记录日志并跳过，避免影响后台面板启动；
      * 宿主显式配置的错误仍然抛出异常，便于开发期发现。
@@ -100,16 +97,13 @@ final class AgentPlugin implements Plugin
         }
 
         return self::rejectDuplicateToolNames(array_values(array_unique([
-            DescribeCmfResource::class,
-            SearchCmfRecords::class,
-            GetCmfRecordAudit::class,
             ...$discovered,
             ...$configured,
         ])));
     }
 
     /**
-     * 按 MCP 工具名去重，保留首个有效声明（内置 > 自动发现 > 宿主配置）。
+     * 按 MCP 工具名去重，保留首个有效声明（自动发现 > 宿主配置）。
      *
      * @param  list<class-string<AgentTool>>  $candidates
      * @return list<class-string<AgentTool>>

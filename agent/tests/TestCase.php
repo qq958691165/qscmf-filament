@@ -16,7 +16,6 @@ use Filament\Schemas\SchemasServiceProvider;
 use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
-use Illuminate\Support\Facades\Gate;
 use Laravel\Ai\AiServiceProvider;
 use Laravel\Mcp\Server\McpServiceProvider;
 use Livewire\LivewireServiceProvider;
@@ -25,9 +24,7 @@ use Packstub\Agents\AgentsServiceProvider;
 use Packstub\FilamentAgents\FilamentAgentsServiceProvider;
 use Quansitech\Cmf\Agent\CmfAgentServiceProvider;
 use Quansitech\Cmf\Agent\Support\DiscoveredAgentTools;
-use Quansitech\Cmf\Agent\Tests\Fixtures\Models\TestArticle;
 use Quansitech\Cmf\Agent\Tests\Fixtures\Models\TestUser;
-use Quansitech\Cmf\Agent\Tests\Fixtures\Policies\TestArticlePolicy;
 use Quansitech\Cmf\Agent\Tests\Fixtures\Providers\AdminPanelProvider;
 use Quansitech\Cmf\Core\CmfCoreServiceProvider;
 use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
@@ -70,20 +67,6 @@ abstract class TestCase extends Orchestra
         $app['config']->set('cmf-agent.panel', 'admin');
         $app['config']->set('cmf-agent.name', 'CMF 助手');
         $app['config']->set('cmf-agent.driver', 'sync');
-        $app['config']->set('cmf-agent.read_resources', [
-            'articles' => [
-                'label' => '文章',
-                'model' => TestArticle::class,
-                'fields' => ['id', 'title', 'status'],
-                'search_fields' => ['title'],
-                'filters' => [
-                    'status' => ['column' => 'status', 'operator' => '='],
-                ],
-                'sortable' => ['id', 'title', 'status'],
-                'default_sort' => ['id', 'desc'],
-                'per_page' => 20,
-            ],
-        ]);
         $app['config']->set('cmf-agent.tools', []);
 
         $app['config']->set('packstub-agents.mcp.enabled', false);
@@ -103,7 +86,6 @@ abstract class TestCase extends Orchestra
         parent::setUp();
         config(['cmf-agent.tools' => []]);
 
-        Gate::policy(TestArticle::class, TestArticlePolicy::class);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
     }
 }

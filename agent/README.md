@@ -1,6 +1,6 @@
 # cmf-module-agent
 
-基于 [packstub/filament-agents](https://github.com/packstub/filament-agents) 的 CMF 后台 AI 助手：在 Filament 面板里提供对话页，按当前后台用户的 Policy 查询和修改业务数据；写入类操作需要人工在对话里批准。
+基于 [packstub/filament-agents](https://github.com/packstub/filament-agents) 的 CMF 后台 AI 助手：在 Filament 面板里提供对话页，按当前后台用户的 Policy 执行已注册工具；写入类操作需要人工在对话里批准。
 
 同一个工具列表也由 Packstub 暴露为外部 MCP 端点（`POST /mcp`），令牌在 **Agent access** 页面签发。模块不依赖 `cmf-module-mcp`，也不提供自研的 `/mcp/{panel}` 端点。
 
@@ -149,9 +149,6 @@ php artisan config:clear
 `config/cmf-agent.php`：
 
 ```php
-use App\Filament\Resources\Articles\ArticleResource;
-use App\Models\Article;
-
 return [
     // 挂载到哪个面板（仅在非租户面板生效）
     'panel' => 'admin',
@@ -166,26 +163,6 @@ return [
     'enable_packstub_mcp' => true,
     'agent_access' => true,
 
-    // 允许模型读取的资源
-    'read_resources' => [
-        'articles' => [
-            'label' => '文章',
-            'model' => Article::class,
-            'resource' => ArticleResource::class,
-            'fields' => ['id', 'title', 'status', 'summary'],
-            'search_fields' => ['title', 'summary'],
-            'filters' => [
-                'status' => ['column' => 'status', 'operator' => '='],
-                'category_id' => ['column' => 'category_id', 'operator' => '='],
-                'published_from' => ['column' => 'published_at', 'operator' => '>='],
-                'published_to' => ['column' => 'published_at', 'operator' => '<='],
-            ],
-            'sortable' => ['id', 'created_at', 'published_at', 'views'],
-            'default_sort' => ['created_at', 'desc'],
-            'per_page' => 20,
-        ],
-    ],
-
     // 宿主定义的 Packstub AgentTool 类
     'tools' => [
         App\Filament\AgentTools\UpdateArticleDraft::class,
@@ -193,21 +170,7 @@ return [
 ];
 ```
 
-`read_resources` 按 slug 配置。可选的 `resource` 必须对应同一模型且已注册到当前面板，查询沿用该 Filament Resource 的 `getEloquentQuery()`。查询工具先检查 `viewAny`，再逐条检查 `view`，仅按有权读取的记录分页，并按 `fields` 返回字段。`search_fields` 必须是 `fields` 的子集；`filters` 的列和操作符由配置决定，工具参数不能传入任意表名或列名。`max_scan_rows` 默认 5000，限制一次查询检查的候选记录数。
-
-`tools` 只配置宿主额外工具，包内置和自动发现的工具仍会合并。
-
-## 内置工具
-
-包内置三个只读工具：
-
-| 工具 | 用途 |
-| --- | --- |
-| `describe_cmf_resource` | 列出当前用户可访问的资源、字段、搜索字段、筛选条件、排序字段和默认排序 |
-| `search_cmf_records` | 按关键词、配置内筛选条件、排序和分页查询资源记录 |
-| `get_cmf_record_audit` | 查询某条记录的审计历史，返回 `old` / `new` 时只保留 `fields` 白名单里的字段 |
-
-`get_cmf_record_audit` 要求记录可读、具备 `ViewAny:Audit`，并通过 CMF 对目标记录的 `audit` Gate。没有定义授权时拒绝读取。授权通过后，若 `audits` 表不存在则返回空列表，若审计操作人已不存在则仅返回其 ID。
+`tools` 配置宿主自己的工具，自动发现到的工具仍会合并进来。
 
 ## 工具发现机制
 
@@ -234,19 +197,18 @@ return [
 
 模块安装后，`AgentPlugin` 在构建后台助手时读取 Composer 安装目录中的 `composer/installed.json`（默认是 `vendor/composer/installed.json`），自动合并这些工具。安装声明工具的模块后 Composer 会写入该文件。修改已安装模块的声明后，运行 `composer update vendor/cmf-module-example` 重新导入该包的元数据；项目没有安装 `cmf-module-agent` 时，这些 `composer.json` 元数据不会被执行，也不会加载任何 Agent 类。
 
-`AgentPlugin::toolClasses()` 会合并以下三类并校验它们都是 `Packstub\Agents\Mcp\AgentTool` 的子类：
+`AgentPlugin::toolClasses()` 会合并以下两类并校验它们都是 `Packstub\Agents\Mcp\AgentTool` 的子类：
 
-1. 包内置工具；
-2. 其它 Composer 包通过 `extra.cmf-agent.tools` 声明的工具；
-3. 宿主在 `config('cmf-agent.tools')` 里显式配置的工具。
+1. 其它 Composer 包通过 `extra.cmf-agent.tools` 声明的工具；
+2. 宿主在 `config('cmf-agent.tools')` 里显式配置的工具。
 
-合并顺序是内置工具、自动发现、宿主配置。两个类暴露同一个 MCP 工具名时，保留首次出现的声明，后续重复项只记录日志。自动发现里无效、损坏或无法实例化的声明也只记录日志并跳过，不会中断后台面板启动。宿主在 `config('cmf-agent.tools')` 里写错类名仍然抛出明确的 `InvalidArgumentException`，便于开发期发现配置错误。
+合并顺序是自动发现、宿主配置。两个类暴露同一个 MCP 工具名时，保留首次出现的声明，后续重复项只记录日志。自动发现里无效、损坏或无法实例化的声明也只记录日志并跳过，不会中断后台面板启动。宿主在 `config('cmf-agent.tools')` 里写错类名仍然抛出明确的 `InvalidArgumentException`，便于开发期发现配置错误。
 
 `extra.cmf-agent.tools` 只是元数据，模块本身不需要依赖 `cmf-module-agent`。工具类源码会继承 `Packstub\Agents\Mcp\AgentTool`；需要独立开发、类型提示或跑静态分析时，模块可自行 require `packstub/agents`。
 
 宿主示例 `App\Filament\AgentTools\UpdateArticleDraft`：修改草稿文章标题；没有 `#[IsReadOnly]`，Packstub 会在对话里要求人工批准，批准后才执行。
 
-自定义写入工具应自己开启事务、加锁并按当前用户鉴权，例如：
+自定义工具应自己开启事务、加锁并按当前用户鉴权，例如：
 
 ```php
 DB::transaction(function () use ($actor, $id, $newTitle, $oldTitle) {
@@ -312,7 +274,7 @@ php vendor/bin/phpunit -c phpunit.xml --do-not-cache-result
 php vendor/bin/phpunit --filter AgentChatTest --do-not-cache-result
 ```
 
-覆盖：只读字段白名单、草稿标题修改的审批流程与 `audits` 记录。
+覆盖：草稿标题修改的审批流程与 `audits` 记录；工具发现、失效声明容错与重名处理。
 
 核对 MCP 路由：
 
