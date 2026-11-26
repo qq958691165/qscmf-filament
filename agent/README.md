@@ -206,6 +206,26 @@ return [
 
 `extra.cmf-agent.tools` 只是元数据，模块本身不需要依赖 `cmf-module-agent`。工具类源码会继承 `Packstub\Agents\Mcp\AgentTool`；需要独立开发、类型提示或跑静态分析时，模块可自行 require `packstub/agents`。
 
+## 工具读写类型
+
+工具是否算写入工具，不由它写在 `tools` 还是 `extra.cmf-agent.tools` 决定，而是看工具类上有没有 `#[IsReadOnly]`：
+
+- 有 `#[IsReadOnly]`：只读工具，后台对话中可直接执行。
+- 没有该注解：默认按写入工具处理，后台对话会先要求人工批准；外部 MCP 还要求令牌带 `write` 能力，只读令牌调用会返回 `This access token is read-only.`。
+
+```php
+use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
+use Packstub\Agents\Mcp\AgentTool;
+
+#[IsReadOnly]
+final class ListOrders extends AgentTool
+{
+    // ...
+}
+```
+
+新增只读查询工具时请显式加 `#[IsReadOnly]`；忘记加会走写入审批流程，虽然更安全，但会降低对话体验。
+
 宿主示例 `App\Filament\AgentTools\UpdateArticleDraft`：修改草稿文章标题；没有 `#[IsReadOnly]`，Packstub 会在对话里要求人工批准，批准后才执行。
 
 自定义工具应自己开启事务、加锁并按当前用户鉴权，例如：
